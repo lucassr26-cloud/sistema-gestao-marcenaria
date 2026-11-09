@@ -104,6 +104,33 @@ def main():
         pg.fill("#fi-W0", ""); assert "Informe a largura da madeira" in pg.inner_text("#fi-m-l")
         pg.fill("#fi-C", ""); assert "Digite comprimento" in pg.inner_text("#fi-erro")
         pg.fill("#fi-C", "50"); pg.fill("#fi-W0", "30")
+        # Máquinas: custo por hora = (6000 - 1000) / (10 anos x 12 meses x 80 h) + 240 / 12 / 80 = R$ 0,77
+        pg.click("#tab-cad"); pg.click("#cb-maq")
+        pg.fill("#mq-nome", "Serra de bancada"); pg.fill("#mq-valor", "6000"); pg.fill("#mq-res", "1000"); pg.fill("#mq-vida", "10"); pg.fill("#mq-horas", "80"); pg.fill("#mq-manut", "240")
+        assert "R$ 0,77" in pg.inner_text("#mq-hora").replace("\xa0", " "), pg.inner_text("#mq-hora")
+        pg.click("#mq-save"); assert "Serra de bancada" in pg.inner_text("#mq-list")
+        pg.click("#tab-orc"); pg.click("#sub-preco"); pg.click("#add-maq")
+        pg.select_option("#rows-maq select", label="Serra de bancada"); pg.fill("#rows-maq .use-bot input", "2")
+        assert "R$ 1,54" in pg.inner_text("#tot-maq").replace("\xa0", " "), pg.inner_text("#tot-maq")   # 2 h x R$ 0,77
+        assert "Máquinas (depreciação)" in pg.inner_text("#legend")
+        # Ficha técnica: salvar, limpar e carregar de volta
+        pg.fill("#nome", "Tábua de teste"); pg.click("#fic-save"); pg.click("#fic-panel .panel .primary")
+        assert "salva" in pg.text_content("#fic-msg"), pg.text_content("#fic-msg")
+        pg.click("#reset"); assert "Nenhuma máquina" in pg.inner_text("#rows-maq")
+        pg.select_option("#fic-sel", label="Tábua de teste")
+        assert pg.input_value("#nome") == "Tábua de teste" and "R$ 1,54" in pg.inner_text("#tot-maq").replace("\xa0", " ")
+        pg.click("#tab-cad"); pg.click("#cb-fic"); assert "Tábua de teste" in pg.inner_text("#fc-list")
+        # Cotação em PDF e em imagem
+        pg.click("#tab-cot"); pg.click("[data-cf=todas]"); pg.click("text=Documento PDF ou imagem")
+        pg.wait_for_selector("#cot-list .panel canvas")
+        with pg.expect_download() as dl:
+            pg.click("#cot-list .panel button:has-text('Salvar PDF')")
+        pdf = open(dl.value.path(), "rb").read()
+        assert pdf[:5] == b"%PDF-" and pdf.rstrip().endswith(b"%%EOF") and len(pdf) > 20000 and dl.value.suggested_filename.endswith(".pdf"), (len(pdf), dl.value.suggested_filename)
+        with pg.expect_download() as dl2:
+            pg.click("#cot-list .panel button:has-text('Salvar imagem')")
+        png = open(dl2.value.path(), "rb").read()
+        assert png[:4] == b"\x89PNG" and len(png) > 20000 and dl2.value.suggested_filename.endswith(".png")
         # Backup por texto: copia o JSON, apaga tudo e restaura colando
         pg.click("#tab-est"); import json
         bk = pg.evaluate("() => JSON.stringify({app:'ljwa-calculadora',versao:6,estoque:JSON.parse(localStorage.getItem('ljwa-estoque-v2')),vendas:JSON.parse(localStorage.getItem('ljwa-vendas-v1'))})")

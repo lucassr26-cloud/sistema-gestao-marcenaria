@@ -4,9 +4,9 @@ Contexto para o Claude Code. O dono é marceneiro (tábuas de churrasco end grai
 explique mudanças em português simples e confirme antes de qualquer coisa que possa apagar ou alterar dados salvos.
 
 ## O que é
-ERP leve de uma página (`index.html`: HTML + CSS + JS puro, sem build, sem dependências) com 6 abas:
+ERP leve de uma página (`index.html`: HTML + CSS + JS puro, sem build, sem dependências) com 7 abas:
 Início/dashboards (`#view-ini`), Calculadoras (`#view-orc`: Precificação, Resina da canaleta e End Grain), Cotações (`#view-cot`), Pedidos (`#view-ped`),
-Finanças (`#view-fin`: Contas a receber e Fluxo de caixa) e Estoque (`#view-est`).
+Finanças (`#view-fin`: Contas a receber e Fluxo de caixa), Estoque (`#view-est`) e Cadastros (`#view-cad`: Máquinas, Fichas técnicas e Conta e backup).
 Interface em **pt-BR**. Moeda BRL via `Intl.NumberFormat('pt-BR')`. Campos numéricos aceitam vírgula (`parseLoose`).
 
 ## Persistência
@@ -14,8 +14,10 @@ Interface em **pt-BR**. Moeda BRL via `Intl.NumberFormat('pt-BR')`. Campos numé
 - `ljwa-estoque-v2` → `{ items: Item[] }`
 - `ljwa-orcamento-v2` → estado da Calculadora (`quote`)
 - `ljwa-vendas-v1` → `{ seqCot, seqPed, cotacoes: Cotacao[], pedidos: Pedido[] }`
+- `ljwa-maquinas-v1` → `{ items: Maquina[] }`; `ljwa-fichas-v1` → `{ items: Ficha[] }`
 - `ljwa-precificacao-v1` → legado, usado só em migração
-Backup/restauração (aba Estoque): JSON `{ app:'ljwa-calculadora', versao:6, exportadoEm, estoque, orcamento, vendas }`.
+- `ljwa-sync-v1` (sessão, versão, pendências), `ljwa-supabase-v1` (endereço e chave colados na tela) e `ljwa-backup-meta-v1`: controle da nuvem, não entram no backup
+Backup/restauração (aba Estoque) e pacote da nuvem: JSON `{ app:'ljwa-calculadora', versao:7, exportadoEm, estoque, orcamento, vendas, maquinas, fichas }`. `restoreObj` aceita backups antigos (sem máquinas/fichas).
 **Nunca mude um formato salvo sem migração** que leia os dados antigos: o dono tem dados reais.
 
 Existe uma variante hospedada no claude.ai que salva na conta Claude (capability `db`, documentos em
@@ -34,6 +36,9 @@ Existe uma variante hospedada no claude.ai que salva na conta Claude (capability
 - **Pedido**: `{ id:'PED-0001', n, tipo?:'estoque', cotacao, cliente, fone, peca, qtd, pagamento:'pix'|'cartao', unit, total,
   sinal, pagamentos?:[{id,data:'YYYY-MM-DD',valor,forma,obs,estorno?:{data,motivo}}], previsao, obs, status:'aberto'|'concluido'|'cancelado', concluidoEm?, canceladoEm?, baixa, materiais[], perda, custoUnit }`
 - `materiais[]`: `{ item, nome, tipo, base }` (quantidade-base consumida por peça).
+- **Maquina**: `{ id, nome, valor, residual, vidaAnos, horasMes, manutAno }`. Custo/hora = `(valor − residual)/(vidaAnos·12·horasMes) + manutAno/12/horasMes` (`maqHora`).
+- **Ficha**: `{ id, nome, calc:{nome, dimC, dimL, dimE, perda, horas, madeira[], insumo[], maquinas[]}, criado }`. Ao carregar, mantém taxa, imposto, margem, custos fixos e valor/hora atuais.
+- `quote.maquinas[]`: `{ id, item, horas }` (uso de máquina na peça; custo entra antes da margem, igual aos insumos). `compute(q)` calcula todos os números do preço e é usado pela calculadora e pelas fichas.
 
 ## Regras de negócio (não quebrar)
 1. **Custo médio ponderado móvel** (`itemTotals`): reprocessa os eventos em ordem de data; compra soma quantidade e valor;
@@ -48,7 +53,9 @@ Existe uma variante hospedada no claude.ai que salva na conta Claude (capability
 8. **Margem exibida** (cotações e pedidos): lucro da marcenaria = preço − custo (já inclui a mão de obra) − taxa do cartão (só se cartão) − imposto; mão de obra = horas × valor/hora de `calc` (pedido novo guarda isso em `fin`; pedido antigo busca na cotação de origem).
 9. **Venda de peça do estoque**: gera um pedido concluído novo com `origemEstoque:'PED-xxxx'` (cliente, data, preço final, `sinal` = total se já recebido). Peças restantes = `qtd` − soma das vendas não canceladas; zero restante = pedido de estoque "Vendido". Cancelar a venda devolve a peça ao estoque.
 10. **Texto da cotação para o cliente** (`cotText`): inclui espécies de madeira (materiais tipo madeira), dimensão final (`quote.dimC/dimL/dimE`, copiada em `cotacao.dim`; cotação antiga tenta ler as medidas do nome da peça) e prazo fixo de 4 a 8 semanas.
-11. Correção de lançamento usa **estorno** (mantém o histórico), nunca exclusão silenciosa.
+11. **Cotação em PDF/imagem** (`cotCanvas`, `pdfDeJpeg`): folha A4 desenhada em canvas (logo embutido em base64, sem biblioteca); o PDF é montado à mão com a imagem JPEG. O conteúdo é medido e encolhe só se não couber.
+12. **Nuvem (Supabase)**: login por e-mail e senha, um registro por usuário em `ljwa_dados` com `versao`; gravar usa `PATCH ... versao=eq.N` (se 0 linhas, houve conflito e o dono escolhe a versão). Backups em `ljwa_backups` (1 por dia, últimos 30, e um antes de trocar versões). Config em `config.js` ou colada na tela. Esquema em `supabase.sql`; passo a passo em `SINCRONIZACAO.md`.
+13. Correção de lançamento usa **estorno** (mantém o histórico), nunca exclusão silenciosa.
 
 ## Interface
 - Mobile-first (usado no celular, na oficina): alvos de toque ≥ 44 px; abas viram grade de 3 colunas abaixo de 480 px.
@@ -58,15 +65,15 @@ Existe uma variante hospedada no claude.ai que salva na conta Claude (capability
 
 ## Testes
 `python tests/smoke_test.py` (Playwright + Chromium). Rode depois de qualquer mudança em cálculo, estoque ou vendas.
+`python tests/sync_test.py` testa login, sincronização, conflito e backups contra `tests/mock_supabase.py` (imita o Supabase, sem internet).
 
 ## Deploy
-Netlify publica a pasta raiz (`netlify.toml`): arrastar a pasta na aba Deploys ou `netlify deploy --prod`.
+Publicado no GitHub Pages (branch `main`, pasta raiz): https://lucassr26-cloud.github.io/sistema-gestao-marcenaria/ . Cada push em `main` atualiza o site.
 
 ## Próximos passos possíveis (combinar com o dono antes)
 - Despesas avulsas (aluguel, energia, frete) no fluxo de caixa.
 - Separar `index.html` em `styles.css` + módulos JS (storage, estoque, vendas, calculadora), mantendo sem build.
 - PWA (manifest + service worker) para abrir offline na oficina.
-- Sincronização entre aparelhos (ex.: Supabase com login), migrando o `localStorage`.
 - Relatórios: margem real por pedido e giro de estoque por espécie.
 
 Resina da canaleta guarda só as últimas medidas em `ljwa-resina-v1` (fora do backup).

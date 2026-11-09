@@ -4,18 +4,19 @@ Sistema de gestão da marcenaria LJ Wood Arts (tábuas de churrasco end grain, G
 Site de uma página só, sem servidor: os dados ficam no navegador.
 
 ## Módulos
-- **Início**: painel com pedidos em aberto, nível de estoque, recomendações de compra e fluxo de caixa.
-- **Calculadoras**: precificação da peça (madeira, insumos, horas, custos fixos, taxas e lucro), resina da canaleta (linear × largura × espessura, 2/3 resina e 1/3 endurecedor) e End Grain (filetes, largura no corte e metros lineares a partir da tábua final).
-- **Cotações**: numeradas (COT-0001…), com cliente, validade e texto pronto para WhatsApp.
+- **Início**: painel com pedidos em aberto, nível de estoque, recomendações de compra e contas a receber.
+- **Calculadoras**: precificação da peça (madeira, insumos, **máquinas**, horas, custos fixos, taxas e lucro; com **fichas técnicas**), resina da canaleta e End Grain (filetes e metros lineares).
+- **Cotações**: numeradas (COT-0001…), com cliente, validade, texto para WhatsApp e **documento em PDF ou imagem**.
 - **Pedidos**: numerados (PED-0001…), em produção até a conclusão; ao concluir, dá baixa no estoque.
-- **Finanças**: contas a receber (pagamentos por pedido, cobrança no WhatsApp) e fluxo de caixa mensal.
+- **Finanças**: contas a receber (pagamentos por pedido) e fluxo de caixa mensal.
 - **Estoque**: compras com custo médio ponderado móvel, madeira em m³, estornos, saídas e histórico.
+- **Cadastros**: **máquinas** (depreciação por hora de uso), **fichas técnicas** por tipo de peça e **conta e backup** (login, sincronização entre aparelhos e backups na nuvem).
 
 ## Como abrir
 Abra `index.html` no navegador. Para publicar: arraste a pasta no Netlify (aba Deploys) ou use `netlify deploy --prod`.
 
-## Backup
-Aba Estoque → Baixar backup (arquivo JSON). Restaure pelo mesmo lugar.
+## Sincronização e backup
+Passo a passo em `SINCRONIZACAO.md` (Supabase gratuito; esquema em `supabase.sql`). Sem a nuvem, os dados ficam no navegador e o backup é feito na aba Estoque (arquivo ou texto).
 
-## Teste
-`python tests/smoke_test.py` (requer Playwright).
+## Testes
+`python tests/smoke_test.py` e `python tests/sync_test.py` (requerem Playwright).
