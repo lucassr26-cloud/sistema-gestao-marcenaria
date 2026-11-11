@@ -90,12 +90,11 @@ button{font:inherit;cursor:pointer}
 .price{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:clamp(44px,11vw,64px);line-height:1;margin:6px 0 4px;font-variant-numeric:tabular-nums;letter-spacing:-1px}
 .shelf{color:var(--muted);font-size:15px;margin:0 0 18px}
 .shelf b{color:var(--ink)}
-.board{display:flex;height:64px;border-radius:8px;overflow:hidden;gap:3px;background:#0B0B0B;padding:3px;margin-bottom:14px}
-.seg{min-width:0;border-radius:3px;transition:flex-grow .35s ease}
-@media (prefers-reduced-motion:reduce){.seg{transition:none}}
+.board{display:flex;justify-content:center;margin:4px 0 16px}
+.board svg{width:100%;max-width:260px;height:auto;display:block;color:var(--ink)}
 .legend{display:grid;gap:2px;margin:0 0 18px;padding:0;list-style:none}
 .legend li{display:grid;grid-template-columns:14px minmax(0,1fr) auto auto;gap:10px;align-items:center;font-size:15px;padding:5px 0;font-variant-numeric:tabular-nums}
-.legend .sw{width:14px;height:14px;border-radius:3px}
+.legend .sw{width:14px;height:14px;border-radius:50%}
 .legend .pc{color:var(--muted);width:48px;text-align:right}
 .cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:16px}
 .card{border:1px solid var(--line);border-radius:10px;padding:12px}
@@ -241,6 +240,8 @@ summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-
 #view-cad .subnav{flex-wrap:wrap}
 #view-cad .subnav button{flex:1 1 calc(50% - 6px)}
 #view-rel .subnav{flex-wrap:wrap}
+#view-fin .subnav{flex-wrap:wrap}
+#view-fin .subnav button{flex:1 1 calc(33% - 6px)}
 #view-rel .subnav button{flex:1 1 calc(50% - 6px)}
 .subnav button{font-size:14px;padding:0 6px}
 .res-out{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0}
@@ -385,7 +386,7 @@ summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-
         <div class="price" id="preco">R$ 0,00</div>
         <p class="shelf">Preço redondo para anunciar: <b id="vitrine">R$ 0,00</b></p>
         <div class="warn" id="warn">Taxa, imposto e lucro somam 100% ou mais do preço. Reduza algum desses percentuais.</div>
-        <div class="board" id="board" aria-hidden="true"></div>
+        <div class="board" id="board"></div>
         <ul class="legend" id="legend"></ul>
         <div class="cards">
           <div class="card"><div class="v" id="pix">R$ 0,00</div><div class="k">No Pix, sem taxa do cartão, mesmo lucro</div></div>
@@ -528,6 +529,7 @@ summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-
     <div class="seg-toggle subnav" role="group" aria-label="Escolha a visão financeira">
       <button type="button" id="sub-rec" aria-pressed="true">Contas a receber</button>
       <button type="button" id="sub-caixa" aria-pressed="false">Fluxo de caixa</button>
+      <button type="button" id="sub-lan" aria-pressed="false">Lançamentos de caixa</button>
     </div>
     <div class="kpis" id="fin-kpis"></div>
     <div id="fin-rec">
@@ -544,10 +546,43 @@ summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-
         <div id="rec-list"></div>
       </section>
     </div>
+    <div id="fin-lan" class="hidden">
+      <div class="grid">
+        <section class="box">
+          <h2>Novo lançamento de caixa</h2>
+          <p class="hint">Registre dinheiro que entrou ou saiu e não está em pedidos nem em compras de estoque: saldo inicial, aluguel, frete, retirada do dono e outros.</p>
+          <button class="ghost" id="ln-saldo" type="button">Informar o saldo que tenho em caixa hoje</button>
+          <label class="lbl" style="margin-top:14px">Tipo</label>
+          <div class="seg-toggle" role="group" aria-label="Tipo do lançamento">
+            <button type="button" data-lt="entrada" aria-pressed="true">Entrada</button>
+            <button type="button" data-lt="saida" aria-pressed="false">Saída</button>
+          </div>
+          <div class="form-grid" style="margin-top:12px">
+            <div><label class="lbl" for="ln-valor">Valor</label><div class="field has-pre"><span class="pre">R$</span><input id="ln-valor" inputmode="decimal"></div></div>
+            <div><label class="lbl" for="ln-data">Data</label><input id="ln-data" type="date"></div>
+          </div>
+          <label class="lbl" for="ln-cat" style="margin-top:12px">Categoria</label>
+          <select id="ln-cat"></select>
+          <label class="lbl" for="ln-forma" style="margin-top:12px">Forma</label>
+          <select id="ln-forma"><option>Dinheiro</option><option>Pix</option><option>Transferência</option><option>Cartão</option><option>Outra</option></select>
+          <label class="lbl" for="ln-desc" style="margin-top:12px">Descrição</label>
+          <input id="ln-desc" type="text" placeholder="Ex.: Aluguel da oficina de novembro">
+          <label class="lbl" for="ln-obs" style="margin-top:12px">Observação (origem do lançamento)</label>
+          <input id="ln-obs" type="text" placeholder="Aparece no relatório em Excel">
+          <div class="formmsg" id="ln-msg" role="status"></div>
+          <button class="primary" id="ln-salvar" type="button">Lançar entrada</button>
+        </section>
+        <section class="box">
+          <h2>Lançamentos manuais</h2>
+          <p class="hint">Para corrigir um lançamento, use Estornar: ele continua no histórico, mas deixa de contar no saldo.</p>
+          <div id="ln-list"></div>
+        </section>
+      </div>
+    </div>
     <div id="fin-caixa" class="hidden">
       <section class="box">
         <h2>Fluxo de caixa</h2>
-        <p class="hint">Entradas (sinais e pagamentos recebidos) contra saídas (compras de estoque), mês a mês.</p>
+        <p class="hint">Entradas (sinais, pagamentos recebidos e lançamentos manuais) contra saídas (compras de estoque e lançamentos manuais), mês a mês.</p>
         <div class="filter" role="group" aria-label="Período">
           <button type="button" data-cm="6" aria-pressed="true">6 meses</button>
           <button type="button" data-cm="12" aria-pressed="false">12 meses</button>
@@ -785,12 +820,12 @@ summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-
   var QDEF={servicos:[],maquinas:[],nome:'',dimC:0,dimL:0,dimE:0,perda:20,horas:10,valorHora:35,fixos:300,pecasMes:6,taxa:5,imposto:0,margem:30,
     madeira:[{id:uid(),item:'',qtd:0,unit:''}],insumo:[{id:uid(),item:'',qtd:0,unit:''}]};
   var estoque={items:[]};
-  var maquinas={items:[]},fichas={items:[]},servicos={items:[]};
+  var maquinas={items:[]},fichas={items:[]},servicos={items:[]},lancamentos={items:[]};
   var quote=clone(QDEF);
 
   /* ---------- storage: db (private per person) with local fallback ---------- */
   var store={mode:'local',db:null,uid:null,chains:{},timers:{}};
-  var LS={est:'ljwa-estoque-v2',orc:'ljwa-orcamento-v2',old:'ljwa-precificacao-v1',ven:'ljwa-vendas-v1',maq:'ljwa-maquinas-v1',fic:'ljwa-fichas-v1',srv:'ljwa-servicos-v1'};
+  var LS={est:'ljwa-estoque-v2',orc:'ljwa-orcamento-v2',old:'ljwa-precificacao-v1',ven:'ljwa-vendas-v1',maq:'ljwa-maquinas-v1',fic:'ljwa-fichas-v1',srv:'ljwa-servicos-v1',lan:'ljwa-lancamentos-v1'};
   var vendas={seqCot:0,seqPed:0,cotacoes:[],pedidos:[]};
   function lsGet(k){try{var r=localStorage.getItem(k);return r?JSON.parse(r):null;}catch(e){return null;}}
   function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}if(typeof SY_KEYS!=='undefined'&&SY_KEYS&&SY_KEYS[k]&&typeof syMarcar==='function')syMarcar();}
@@ -831,6 +866,7 @@ summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-
     if(!Array.isArray(quote.maquinas))quote.maquinas=[];
     if(!Array.isArray(quote.servicos))quote.servicos=[];
     if(!servicos||!Array.isArray(servicos.items))servicos={items:[]};
+    if(!lancamentos||!Array.isArray(lancamentos.items))lancamentos={items:[]};
     if(!maquinas||!Array.isArray(maquinas.items))maquinas={items:[]};
     if(!fichas||!Array.isArray(fichas.items))fichas={items:[]};
   }
@@ -839,7 +875,7 @@ summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-
     estoque=lsGet(LS.est)||{items:[]};
     quote=lsGet(LS.orc)||migrateOld(clone(QDEF));
     vendas=lsGet(LS.ven)||vendas;
-    maquinas=lsGet(LS.maq)||{items:[]};fichas=lsGet(LS.fic)||{items:[]};servicos=lsGet(LS.srv)||{items:[]};
+    maquinas=lsGet(LS.maq)||{items:[]};fichas=lsGet(LS.fic)||{items:[]};servicos=lsGet(LS.srv)||{items:[]};lancamentos=lsGet(LS.lan)||{items:[]};
     normalize();normVendas();
   }
 
@@ -985,7 +1021,7 @@ summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-
 
   /* ---------- calc ---------- */
   function grain(c,seed){var x=(seed*37)%100,y=(seed*61)%100;return 'repeating-radial-gradient(circle at '+x+'% '+y+'%, '+c+' 0 5px, color-mix(in srgb, '+c+' 78%, #000) 5px 9px)';}
-  var SEGS=[{k:'madeira',label:'Madeira com perda',c:'--w1'},{k:'insumos',label:'Insumos',c:'--w2'},{k:'maquinas',label:'Máquinas (depreciação)',c:'--w7'},{k:'servicos',label:'Serviços',c:'--w8'},{k:'trabalho',label:'Seu trabalho',c:'--w3'},{k:'fixos',label:'Custos da oficina',c:'--w4'},{k:'taxas',label:'Taxa e imposto',c:'--w5'},{k:'lucro',label:'Lucro',c:'--w6'}];
+  var SEGS=[{k:'madeira',label:'Madeira com perda',c:'#A0642D'},{k:'insumos',label:'Insumos',c:'#E0A93B'},{k:'maquinas',label:'Máquinas (depreciação)',c:'#4F86C6'},{k:'servicos',label:'Serviços',c:'#3FB0A4'},{k:'trabalho',label:'Seu trabalho',c:'#D9593D'},{k:'fixos',label:'Custos da oficina',c:'#8E6BBF'},{k:'taxas',label:'Taxa e imposto',c:'#8A8A8A'},{k:'lucro',label:'Lucro',c:'#4FA85A'}];
   var last=null;
   /* todos os números do preço de uma peça (usado pela calculadora e pelas fichas técnicas) */
   function compute(q){
@@ -1013,15 +1049,31 @@ summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-
     $('minimo').textContent=money(minimo);$('custo').textContent=money(custo);$('lucro').textContent=money(lucro);
     var parts={madeira:mad,insumos:ins,maquinas:maq,servicos:srv,trabalho:trab,fixos:fix,taxas:taxas,lucro:lucro};
     var board=$('board'),legend=$('legend');board.innerHTML='';legend.innerHTML='';
-    var cs=getComputedStyle(document.documentElement);
-    SEGS.forEach(function(s,i){
-      var v=parts[s.k],col=cs.getPropertyValue(s.c).trim(),pct=preco>0?v/preco*100:0;
-      var seg=document.createElement('div');seg.className='seg';seg.style.flexGrow=String(Math.max(v,0));seg.style.flexBasis='0';seg.style.background=grain(col,i+3);
-      if(v<=0)seg.style.display='none';board.appendChild(seg);
+    var NS='http://www.w3.org/2000/svg';
+    function mk(tag,at){var e=document.createElementNS(NS,tag);Object.keys(at).forEach(function(k){e.setAttribute(k,at[k]);});return e;}
+    var svg=mk('svg',{viewBox:'-110 -110 220 220',role:'img'});
+    var total=SEGS.reduce(function(a,s){return a+Math.max(parts[s.k],0);},0),R=100,r=58,ang=-Math.PI/2,resumo=[];
+    SEGS.forEach(function(s){
+      var v=Math.max(parts[s.k],0),pct=preco>0?parts[s.k]/preco*100:0;
+      if(v>0&&total>0){
+        var fr=v/total,a1=ang+fr*2*Math.PI;
+        if(fr>=0.9999)svg.appendChild(mk('circle',{cx:0,cy:0,r:(R+r)/2,fill:'none',stroke:s.c,'stroke-width':R-r}));
+        else{
+          var big=fr>0.5?1:0,x0=R*Math.cos(ang),y0=R*Math.sin(ang),x1=R*Math.cos(a1),y1=R*Math.sin(a1),x2=r*Math.cos(a1),y2=r*Math.sin(a1),x3=r*Math.cos(ang),y3=r*Math.sin(ang);
+          svg.appendChild(mk('path',{d:'M'+x0+' '+y0+' A'+R+' '+R+' 0 '+big+' 1 '+x1+' '+y1+' L'+x2+' '+y2+' A'+r+' '+r+' 0 '+big+' 0 '+x3+' '+y3+' Z',fill:s.c,stroke:'var(--panel)','stroke-width':2.5,'stroke-linejoin':'round'}));
+        }
+        ang=a1;resumo.push(s.label+' '+Math.round(pct)+'%');
+      }
       var li=document.createElement('li');li.innerHTML='<span class="sw"></span><span></span><span></span><span class="pc"></span>';
-      li.children[0].style.background=col;li.children[1].textContent=s.label;li.children[2].textContent=money(v);li.children[3].textContent=Math.round(pct)+'%';
+      li.children[0].style.background=s.c;li.children[1].textContent=s.label;li.children[2].textContent=money(parts[s.k]);li.children[3].textContent=Math.round(pct)+'%';
       legend.appendChild(li);
     });
+    if(!(total>0))svg.appendChild(mk('circle',{cx:0,cy:0,r:(R+r)/2,fill:'none',stroke:'var(--line)','stroke-width':R-r}));
+    var tx=money(preco),fs=Math.min(24,100/(tx.length*0.58));
+    var t1=mk('text',{x:0,y:-12,'text-anchor':'middle','font-size':13,fill:'var(--muted)','font-family':'Manrope,Segoe UI,sans-serif','font-weight':600});t1.textContent='Preço no cartão';svg.appendChild(t1);
+    var t2=mk('text',{x:0,y:16,'text-anchor':'middle','font-size':fs,fill:'currentColor','font-family':'Fraunces,Georgia,serif','font-weight':600});t2.textContent=tx;svg.appendChild(t2);
+    svg.setAttribute('aria-label','Composição do preço: '+(resumo.length?resumo.join(', '):'sem valores'));
+    board.appendChild(svg);
     last={preco:preco,pix:pix,vitrine:vitrine,custo:custo,lucro:lucro};
   }
 
@@ -1636,7 +1688,7 @@ summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-
   }
 
   /* ---------- backup ---------- */
-  function backupData(){return {app:'ljwa-calculadora',versao:8,exportadoEm:new Date().toISOString(),estoque:estoque,orcamento:quote,vendas:vendas,maquinas:maquinas,fichas:fichas,servicos:servicos};}
+  function backupData(){return {app:'ljwa-calculadora',versao:9,exportadoEm:new Date().toISOString(),estoque:estoque,orcamento:quote,vendas:vendas,maquinas:maquinas,fichas:fichas,servicos:servicos,lancamentos:lancamentos};}
   function bkMsg(t,ok){$('bk-msg').className='formmsg '+(ok===false?'err':'ok');$('bk-msg').textContent=t;}
   $('bk-exp').addEventListener('click',function(){
     var blob=new Blob([JSON.stringify(backupData(),null,2)],{type:'application/json'});
@@ -1650,8 +1702,8 @@ summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-
   function restoreObj(d){
     if(!d||d.app!=='ljwa-calculadora'||!d.estoque||!Array.isArray(d.estoque.items))throw new Error('backup');
     estoque=d.estoque;quote=d.orcamento||clone(QDEF);vendas=d.vendas||{seqCot:0,seqPed:0,cotacoes:[],pedidos:[]};
-    maquinas=d.maquinas||{items:[]};fichas=d.fichas||{items:[]};servicos=d.servicos||{items:[]};
-    normalize();normVendas();saveEst();saveOrc();saveVendas();saveMaq();saveFic();saveSrv();
+    maquinas=d.maquinas||{items:[]};fichas=d.fichas||{items:[]};servicos=d.servicos||{items:[]};lancamentos=d.lancamentos||{items:[]};
+    normalize();normVendas();saveEst();saveOrc();saveVendas();saveMaq();saveFic();saveSrv();saveLan();
     fillFields();refreshList();renderItems();renderMaqRows();renderSrvRows();renderFicSel();
   }
   function restoreText(txt){
@@ -1779,7 +1831,7 @@ summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-
     K.appendChild(kpi('Pedidos em produção',String(abertos.length),money(valAberto)+' em vendas'+(comSinal?' · '+comSinal+' com sinal':'')));
     K.appendChild(kpi('A receber',money(receber),atrasados.length?atrasados.length+(atrasados.length===1?' pedido atrasado ou sem pagar':' pedidos atrasados ou sem pagar'):'Nenhum atraso',atrasados.length>0));
     K.appendChild(kpi('Valor em estoque',money(valorEst),comprar.length?comprar.length+(comprar.length===1?' item para comprar':' itens para comprar'):'Estoque em dia',false));
-    K.appendChild(kpi('Caixa em '+mesLabel(mk),money(cm.ent-cm.sai),'Entrou '+money(cm.ent)+' · saiu '+money(cm.sai),cm.ent-cm.sai<0));
+    var scx=saldoCaixa();K.appendChild(kpi('Saldo em caixa',money(scx),'Em '+mesLabel(mk)+': entrou '+money(cm.ent)+' · saiu '+money(cm.sai),scx<0));
     var prontas=vendas.pedidos.filter(function(p){return p.tipo==='estoque'&&p.status==='concluido';});
     var nPecas=prontas.reduce(function(a,p){return a+restantes(p);},0);
     var vVenda=prontas.reduce(function(a,p){return a+(+p.unit||0)*restantes(p);},0);
@@ -1844,12 +1896,13 @@ summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-
   function cashflow(n){
     var hoje=today(),meses=[],map={};
     var d=new Date(hoje+'T00:00:00');d.setDate(1);d.setMonth(d.getMonth()-(n-1));
-    for(var i=0;i<n;i++){var k=isoLocal(d).slice(0,7);var m={k:k,ent:0,sai:0};meses.push(m);map[k]=m;d.setMonth(d.getMonth()+1);}
+    for(var i=0;i<n;i++){var k=isoLocal(d).slice(0,7);var m={k:k,ent:0,sai:0,entPed:0};meses.push(m);map[k]=m;d.setMonth(d.getMonth()+1);}
     estoque.items.forEach(function(it){(it.compras||[]).forEach(function(c){if(c.estorno)return;var m=map[mesKey(c.data)];if(m)m.sai+=+c.valor||0;});});
+    lanAtivos().forEach(function(l){var m=map[mesKey(l.data)];if(m){if(l.tipo==='entrada')m.ent+=+l.valor||0;else m.sai+=+l.valor||0;}});
     var prev={};
     vendasAtivas().forEach(function(p){
-      var m=map[mesKey(dayIso(p.data))];if(m)m.ent+=+p.sinal||0;
-      pagsAtivos(p).forEach(function(g){var m2=map[mesKey(g.data)];if(m2)m2.ent+=+g.valor||0;});
+      var m=map[mesKey(dayIso(p.data))];if(m){m.ent+=+p.sinal||0;m.entPed+=+p.sinal||0;}
+      pagsAtivos(p).forEach(function(g){var m2=map[mesKey(g.data)];if(m2){m2.ent+=+g.valor||0;m2.entPed+=+g.valor||0;}});
       var sd=saldoPd(p);
       if(sd>0.005){var k=p.status==='concluido'?'entregue':!p.previsao?'sem':p.previsao<hoje?'atrasado':mesKey(p.previsao);prev[k]=(prev[k]||0)+sd;}
     });
@@ -1879,8 +1932,8 @@ summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-
   }
   function renderFin(){
     var hoje=today(),mk=mesKey(hoje),cash=cashflow(cashN),cm=cash.meses[cash.meses.length-1];
-    $('sub-rec').setAttribute('aria-pressed',String(finSub==='rec'));$('sub-caixa').setAttribute('aria-pressed',String(finSub==='caixa'));
-    $('fin-rec').classList.toggle('hidden',finSub!=='rec');$('fin-caixa').classList.toggle('hidden',finSub!=='caixa');
+    $('sub-rec').setAttribute('aria-pressed',String(finSub==='rec'));$('sub-caixa').setAttribute('aria-pressed',String(finSub==='caixa'));$('sub-lan').setAttribute('aria-pressed',String(finSub==='lan'));
+    $('fin-rec').classList.toggle('hidden',finSub!=='rec');$('fin-caixa').classList.toggle('hidden',finSub!=='caixa');$('fin-lan').classList.toggle('hidden',finSub!=='lan');
     var ativos=vendasAtivas(),comSaldo=ativos.filter(function(p){return saldoPd(p)>0.005;});
     var aReceber=comSaldo.reduce(function(a,p){return a+saldoPd(p);},0);
     var atr=comSaldo.filter(function(p){return atrasadoPd(p,hoje);});
@@ -1889,16 +1942,23 @@ summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-
     if(finSub==='rec'){
       K.appendChild(kpi('Total a receber',money(aReceber),comSaldo.length+(comSaldo.length===1?' pedido com saldo':' pedidos com saldo')));
       K.appendChild(kpi('Atrasado ou entregue sem pagar',money(atrVal),atr.length+(atr.length===1?' pedido':' pedidos'),atrVal>0));
-      K.appendChild(kpi('Recebido em '+mesLabel(mk),money(cm.ent),'sinais e pagamentos'));
+      K.appendChild(kpi('Recebido em '+mesLabel(mk),money(cm.entPed),'sinais e pagamentos de pedidos'));
       K.appendChild(kpi('Já recebido (total)',money(ativos.reduce(function(a,p){return a+Math.min(recebido(p),+p.total||0);},0)),'de '+money(ativos.reduce(function(a,p){return a+(+p.total||0);},0))+' vendidos'));
+    }else if(finSub==='lan'){
+      var entM=0,saiM=0;lanAtivos().forEach(function(l){if(mesKey(l.data)===mk){if(l.tipo==='entrada')entM+=+l.valor||0;else saiM+=+l.valor||0;}});
+      var sc=saldoCaixa();
+      K.appendChild(kpi('Saldo em caixa hoje',money(sc),'recebimentos e lançamentos − compras e saídas',sc<0));
+      K.appendChild(kpi('Entradas manuais em '+mesLabel(mk),money(entM),'lançadas por você'));
+      K.appendChild(kpi('Saídas manuais em '+mesLabel(mk),money(saiM),'lançadas por você'));
+      K.appendChild(kpi('Lançamentos manuais',String(lancamentos.items.length),lancamentos.items.filter(function(l){return l.estorno;}).length+' estornado(s)'));
     }else{
       var ent=0,sai=0;cash.meses.forEach(function(m){ent+=m.ent;sai+=m.sai;});
-      K.appendChild(kpi('Entradas · '+cashN+' meses',money(ent),'sinais e pagamentos'));
-      K.appendChild(kpi('Saídas · '+cashN+' meses',money(sai),'compras de estoque'));
+      K.appendChild(kpi('Entradas · '+cashN+' meses',money(ent),'sinais, pagamentos e lançamentos manuais'));
+      K.appendChild(kpi('Saídas · '+cashN+' meses',money(sai),'compras de estoque e saídas manuais'));
       K.appendChild(kpi('Saldo do período',money(ent-sai),'',ent-sai<0));
       K.appendChild(kpi('A receber',money(aReceber),'ainda não entrou no caixa'));
     }
-    if(finSub==='rec')renderRec(hoje);else renderCash(cash,mk);
+    if(finSub==='rec')renderRec(hoje);else if(finSub==='lan')renderLan();else renderCash(cash,mk);
   }
   function renderRec(hoje){
     document.querySelectorAll('[data-rcf]').forEach(function(b){b.setAttribute('aria-pressed',String(b.getAttribute('data-rcf')===recF));});
@@ -2550,6 +2610,11 @@ summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-
           obs:'Compra lançada no Estoque'+(c.forn?' · Fornecedor: '+c.forn:'')+(c.dims&&+c.dims.c>0?' · Peças: '+(c.dims.n||1)+' × '+num2.format(c.dims.c)+' × '+num2.format(c.dims.l)+' × '+num2.format(c.dims.e)+' cm':'')+(c.estorno?' · '+estornoTxt(c.estorno):'')});
       });
     });
+    lancamentos.items.forEach(function(l){
+      out.push({data:l.data,tipo:l.tipo==='entrada'?'Entrada':'Saída',cat:l.categoria,desc:l.desc,doc:'Lançamento manual',parte:'Não informado',forma:l.forma||'Não informada',
+        entrada:l.tipo==='entrada'?+l.valor:0,saida:l.tipo==='entrada'?0:+l.valor,situacao:l.estorno?'Estornado':'Efetivado',
+        obs:'Lançamento manual no caixa'+(l.obs?' · '+l.obs:'')+(l.estorno?' · '+estornoTxt(l.estorno):'')});
+    });
     out.sort(function(a,b){var da=a.data||'0000',db=b.data||'0000';return da<db?-1:da>db?1:(a.tipo===b.tipo?0:a.tipo==='Entrada'?-1:1);});
     return out;
   }
@@ -2574,7 +2639,7 @@ summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-
     $('rb-est').setAttribute('aria-pressed',String(est));$('rb-fin').setAttribute('aria-pressed',String(!est));
     $('rel-item-w').classList.toggle('hidden',!est);
     $('rel-titulo').textContent=est?'Movimentos de estoque':'Lançamentos financeiros';
-    $('rel-hint').textContent=est?'Todas as entradas (compras) e saídas (baixas de produção e saídas manuais) de madeiras e insumos.':'Todas as entradas (sinais e pagamentos recebidos) e saídas (compras de estoque), com a origem de cada lançamento.';
+    $('rel-hint').textContent=est?'Todas as entradas (compras) e saídas (baixas de produção e saídas manuais) de madeiras e insumos.':'Todas as entradas (sinais, pagamentos recebidos e lançamentos manuais) e saídas (compras de estoque e lançamentos manuais), com a origem de cada lançamento.';
     $('rel-de').value=rel.de;$('rel-ate').value=rel.ate;$('rel-q').value=rel.q;
     document.querySelectorAll('[data-rt]').forEach(function(b){b.setAttribute('aria-pressed',String(b.getAttribute('data-rt')===rel.tipo));});
     if(est){var sel=$('rel-item');var cur=rel.item;sel.innerHTML='';var o=el('option',null,'Todos os itens');o.value='';sel.appendChild(o);
@@ -2589,8 +2654,8 @@ summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-
       K.appendChild(kpi('Lançamentos no período',String(rows.length),rows.length-ef.length?(rows.length-ef.length)+' estornado(s) fora dos totais':'Nenhum estorno',false,true));
     }else{
       var e2=ef.reduce(function(a,r){return a+r.entrada;},0),s2=ef.reduce(function(a,r){return a+r.saida;},0);
-      K.appendChild(kpi('Entradas',money(e2),ef.filter(function(r){return r.entrada>0;}).length+' recebimentos'));
-      K.appendChild(kpi('Saídas',money(s2),ef.filter(function(r){return r.saida>0;}).length+' compras'));
+      K.appendChild(kpi('Entradas',money(e2),ef.filter(function(r){return r.entrada>0;}).length+' entradas'));
+      K.appendChild(kpi('Saídas',money(s2),ef.filter(function(r){return r.saida>0;}).length+' saídas'));
       K.appendChild(kpi('Saldo do período',money(e2-s2),rows.length-ef.length?(rows.length-ef.length)+' estornado(s) ou cancelado(s) fora dos totais':'Tudo efetivado',e2-s2<0,true));
     }
     var box=$('rel-list');box.innerHTML='';
@@ -2663,8 +2728,65 @@ summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-
     catch(e){$('rel-status').textContent='Não foi possível gerar a planilha.';}
   });
 
+  /* ---------- lançamentos manuais de caixa (entradas e saídas) ---------- */
+  var LAN_CAT={entrada:['Saldo inicial do caixa','Aporte do dono','Venda avulsa','Outras entradas'],
+    saida:['Aluguel','Energia, água e internet','Frete','Ferramentas e manutenção','Serviços de terceiros','Retirada do dono','Impostos e taxas','Outras saídas']};
+  var lanTipo='entrada';
+  function saveLan(){lsSet(LS.lan,lancamentos);}
+  function lanAtivos(){return lancamentos.items.filter(function(l){return !l.estorno;});}
+  /* saldo em caixa até hoje: recebimentos + entradas manuais - compras de estoque - saídas manuais (estornos ficam de fora) */
+  function saldoCaixa(){
+    var hoje=today(),s=0;
+    vendasAtivas().forEach(function(p){if(dayIso(p.data)<=hoje)s+=+p.sinal||0;pagsAtivos(p).forEach(function(g){if(g.data<=hoje)s+=+g.valor||0;});});
+    estoque.items.forEach(function(it){(it.compras||[]).forEach(function(c){if(!c.estorno&&(c.data||'')<=hoje)s-=+c.valor||0;});});
+    lanAtivos().forEach(function(l){if(l.data<=hoje)s+=(l.tipo==='entrada'?1:-1)*(+l.valor||0);});
+    return s;
+  }
+  function lanMsg(t,ok){var m=$('ln-msg');m.className='formmsg '+(ok===false?'err':'ok');m.textContent=t;}
+  function lanSyncForm(){
+    document.querySelectorAll('[data-lt]').forEach(function(b){b.setAttribute('aria-pressed',String(b.getAttribute('data-lt')===lanTipo));});
+    var sel=$('ln-cat'),cur=sel.value;sel.innerHTML='';
+    LAN_CAT[lanTipo].forEach(function(c){var o=el('option',null,c);o.value=c;sel.appendChild(o);});
+    if(LAN_CAT[lanTipo].indexOf(cur)>=0)sel.value=cur;
+    $('ln-salvar').textContent=lanTipo==='entrada'?'Lançar entrada':'Lançar saída';
+  }
+  document.querySelectorAll('[data-lt]').forEach(function(b){b.addEventListener('click',function(){lanTipo=b.getAttribute('data-lt');lanSyncForm();});});
+  $('ln-saldo').addEventListener('click',function(){lanTipo='entrada';lanSyncForm();$('ln-cat').value='Saldo inicial do caixa';if(!$('ln-desc').value.trim())$('ln-desc').value='Saldo inicial em caixa';$('ln-valor').focus();lanMsg('Digite quanto você tem em caixa hoje e toque em Lançar entrada.');});
+  $('ln-salvar').addEventListener('click',function(){
+    var v=parseLoose($('ln-valor').value),dt=$('ln-data').value,cat=$('ln-cat').value;
+    if(!(v>0)){lanMsg('Informe o valor, maior que zero.',false);$('ln-valor').focus();return;}
+    if(!dt){lanMsg('Informe a data do lançamento.',false);$('ln-data').focus();return;}
+    var l={id:uid(),data:dt,tipo:lanTipo,valor:v,categoria:cat,desc:$('ln-desc').value.trim()||cat,forma:$('ln-forma').value,obs:$('ln-obs').value.trim(),criado:new Date().toISOString()};
+    lancamentos.items.push(l);saveLan();
+    $('ln-valor').value='';$('ln-desc').value='';$('ln-obs').value='';
+    renderFin();lanMsg((lanTipo==='entrada'?'Entrada':'Saída')+' de '+money(v)+' lançada ('+cat+'). Saldo em caixa agora: '+money(saldoCaixa())+'.');
+  });
+  function renderLan(){
+    $('ln-data').value=$('ln-data').value||today();lanSyncForm();
+    var box=$('ln-list');box.innerHTML='';
+    var lista=lancamentos.items.slice().sort(function(a,b){return a.data<b.data?1:a.data>b.data?-1:String(b.criado).localeCompare(String(a.criado));});
+    if(!lista.length){box.appendChild(el('p','empty','Nenhum lançamento manual ainda. Comece informando o saldo que você tem em caixa hoje.'));return;}
+    lista.slice(0,100).forEach(function(l){
+      var d=el('div','doc'),h=el('div','doc-head'),lf=el('div'),idl=el('div','doc-id',l.categoria);
+      idl.appendChild(el('span','chip '+(l.tipo==='entrada'?'done':'off'),l.tipo==='entrada'?'Entrada':'Saída'));
+      if(l.estorno)idl.appendChild(el('span','chip late','Estornado'));
+      lf.appendChild(idl);lf.appendChild(el('div','doc-line',fmtDate(l.data)+' · '+l.desc+' · '+l.forma));
+      var r=el('div','doc-val');r.appendChild(el('b',null,(l.tipo==='entrada'?'+ ':'− ')+money(l.valor)));r.appendChild(el('span',null,l.tipo==='entrada'?'entrada':'saída'));
+      h.appendChild(lf);h.appendChild(r);d.appendChild(h);
+      if(l.obs)d.appendChild(el('div','doc-line','Observação: '+l.obs));
+      if(l.estorno)d.appendChild(el('div','doc-line','Estornado em '+fdAny(l.estorno.data)+(l.estorno.motivo?': '+l.estorno.motivo:'')+'. Não conta no saldo.'));
+      if(l.estorno)d.style.opacity='.65';
+      var acts=el('div','mv-acts'),bt=el('button','mini'+(l.estorno?'':' danger'),l.estorno?'Desfazer estorno':'Estornar');bt.type='button';acts.appendChild(bt);
+      if(l.estorno)bt.addEventListener('click',function(){delete l.estorno;saveLan();renderFin();lanMsg('Estorno desfeito. O lançamento voltou ao saldo.');});
+      else arm(bt,'Estornar','Confirmar estorno',function(){l.estorno={data:today(),motivo:'Estorno manual'};saveLan();renderFin();lanMsg('Lançamento estornado. Ele continua no histórico e no Excel, mas não conta no saldo.');});
+      d.appendChild(acts);box.appendChild(d);
+    });
+    if(lista.length>100)box.appendChild(el('p','note','Mostrando os 100 mais recentes de '+lista.length+'. O Excel em Relatórios traz todos.'));
+  }
+  $('sub-lan').addEventListener('click',function(){finSub='lan';renderFin();});
+
   /* ---------- nuvem: login, sincronização e backups (Supabase) ---------- */
-  var SY_KEYS={};SY_KEYS[LS.est]=1;SY_KEYS[LS.orc]=1;SY_KEYS[LS.ven]=1;SY_KEYS[LS.maq]=1;SY_KEYS[LS.fic]=1;SY_KEYS[LS.srv]=1;
+  var SY_KEYS={};SY_KEYS[LS.est]=1;SY_KEYS[LS.orc]=1;SY_KEYS[LS.ven]=1;SY_KEYS[LS.maq]=1;SY_KEYS[LS.fic]=1;SY_KEYS[LS.srv]=1;SY_KEYS[LS.lan]=1;
   var SYLS='ljwa-sync-v1',SYCFG='ljwa-supabase-v1',BKMETA='ljwa-backup-meta-v1',BKANTES='ljwa-backup-antes-sync-v1';
   var sy=(function(){var o=lsGet(SYLS)||{};return {sess:o.sess||null,versao:+o.versao||0,sujo:!!o.sujo,ultima:o.ultima||'',ultimoBackup:o.ultimoBackup||'',rev:0,aplicando:false,ocupado:false,timer:null,conflito:null,msg:'',msgOk:true,lista:null};})();
   function sySave(){try{localStorage.setItem(SYLS,JSON.stringify({sess:sy.sess,versao:sy.versao,sujo:sy.sujo,ultima:sy.ultima,ultimoBackup:sy.ultimoBackup}));}catch(e){}}
@@ -2723,8 +2845,8 @@ summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-
   /* pacote de dados e comparação */
   function syPacote(){return backupData();}
   function syNorm(d){var c=clone(d);delete c.exportadoEm;return JSON.stringify(c);}
-  function syTemDados(){return estoque.items.length>0||vendas.cotacoes.length>0||vendas.pedidos.length>0||maquinas.items.length>0||fichas.items.length>0||servicos.items.length>0||(+vendas.seqCot>0)||(+vendas.seqPed>0);}
-  function syResumo(d){var e=(d.estoque&&d.estoque.items||[]).length,v=d.vendas||{};return e+' itens de estoque, '+((v.cotacoes||[]).length)+' cotações, '+((v.pedidos||[]).length)+' pedidos, '+(((d.maquinas||{}).items||[]).length)+' máquinas, '+(((d.servicos||{}).items||[]).length)+' serviços e '+(((d.fichas||{}).items||[]).length)+' fichas';}
+  function syTemDados(){return estoque.items.length>0||vendas.cotacoes.length>0||vendas.pedidos.length>0||maquinas.items.length>0||fichas.items.length>0||servicos.items.length>0||lancamentos.items.length>0||(+vendas.seqCot>0)||(+vendas.seqPed>0);}
+  function syResumo(d){var e=(d.estoque&&d.estoque.items||[]).length,v=d.vendas||{};return e+' itens de estoque, '+((v.cotacoes||[]).length)+' cotações, '+((v.pedidos||[]).length)+' pedidos, '+(((d.maquinas||{}).items||[]).length)+' máquinas, '+(((d.servicos||{}).items||[]).length)+' serviços, '+(((d.lancamentos||{}).items||[]).length)+' lançamentos de caixa e '+(((d.fichas||{}).items||[]).length)+' fichas';}
 
   /* operações na nuvem */
   function syGet(){return syReq('GET','/rest/v1/ljwa_dados?select=conteudo,versao,atualizado_em&user_id=eq.'+sy.sess.user.id).then(function(r){return (r&&r[0])||null;});}

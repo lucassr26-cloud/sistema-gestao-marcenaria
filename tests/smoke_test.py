@@ -159,8 +159,34 @@ def main():
             pg.click("#cot-list .panel button:has-text('Salvar imagem')")
         png = open(dl2.value.path(), "rb").read()
         assert png[:4] == b"\x89PNG" and len(png) > 20000 and dl2.value.suggested_filename.endswith(".png")
+        # Lançamento manual de caixa: saldo inicial de R$ 600 e uma saída de R$ 80
+        import re
+        def num(txt):
+            m = re.search(r"R\$\s*(-?[\d.]+,\d\d)", txt.replace("\xa0", " ")); return float(m.group(1).replace(".", "").replace(",", ".")) if m else None
+        pg.click("#tab-fin"); pg.click("#sub-lan")
+        antes = num(pg.inner_text("#fin-kpis"))
+        pg.click("#ln-saldo"); pg.fill("#ln-valor", "600"); pg.fill("#ln-obs", "Dinheiro que havia na gaveta da oficina"); pg.click("#ln-salvar")
+        assert "Saldo inicial do caixa" in pg.inner_text("#ln-list") and "Dinheiro que havia na gaveta" in pg.inner_text("#ln-list")
+        assert abs(num(pg.inner_text("#fin-kpis")) - (antes + 600)) < 0.01, (antes, pg.inner_text("#fin-kpis"))
+        pg.click("[data-lt=saida]"); pg.select_option("#ln-cat", "Frete"); pg.fill("#ln-valor", "80"); pg.fill("#ln-obs", "Frete da tábua do cliente teste"); pg.click("#ln-salvar")
+        assert abs(num(pg.inner_text("#fin-kpis")) - (antes + 520)) < 0.01
+        pg.click("#tab-ini"); assert "Saldo em caixa" in pg.inner_text("#kpis") and abs(num(pg.inner_text("#kpis").split("Saldo em caixa")[1]) - (antes + 520)) < 0.01
+        pg.click("#tab-rel"); pg.click("[data-rp=mes]"); pg.click("#rb-fin"); fl = pg.inner_text("#rel-list").replace("\xa0", " ")
+        assert "Saldo inicial do caixa" in fl and "Lançamento manual no caixa" in fl and "Frete da tábua do cliente teste" in fl, fl
+        with pg.expect_download() as dz:
+            pg.click("#rel-xlsx")
+        try:
+            import openpyxl
+            dz.value.save_as(XLSX_FIN); wz = openpyxl.load_workbook(XLSX_FIN)["Lançamentos"]
+            obs = [c.value for c in wz["L"]]; docs = [c.value for c in wz["E"]]
+            assert "Lançamento manual" in docs and any("gaveta da oficina" in str(o) for o in obs), obs
+        except ImportError:
+            pass
+        pg.click("#tab-fin"); pg.click("#sub-lan")
+        pg.click("#ln-list .doc:has-text('Frete') button:has-text('Estornar')"); pg.click("#ln-list .doc:has-text('Frete') button:has-text('Confirmar estorno')")
+        assert abs(num(pg.inner_text("#fin-kpis")) - (antes + 600)) < 0.01 and "Estornado" in pg.inner_text("#ln-list")   # estorno devolve o saldo e mantém o histórico
         # Relatório de movimentos de estoque, com filtro de período, e exportação para Excel
-        pg.click("#tab-rel"); pg.click("[data-rp=mes]")
+        pg.click("#tab-rel"); pg.click("#rb-est"); pg.click("[data-rp=mes]")
         rel = pg.inner_text("#rel-list").replace("\xa0", " ")
         assert "Compra" in rel and "Muiracatiara" in rel and "Baixa de produção do pedido PED-0001" in rel, rel
         assert "R$ 270,00" in pg.inner_text("#rel-kpis").replace("\xa0", " "), pg.inner_text("#rel-kpis")      # compras de 150 + 120
