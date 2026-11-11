@@ -1049,31 +1049,7 @@ summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-
     $('minimo').textContent=money(minimo);$('custo').textContent=money(custo);$('lucro').textContent=money(lucro);
     var parts={madeira:mad,insumos:ins,maquinas:maq,servicos:srv,trabalho:trab,fixos:fix,taxas:taxas,lucro:lucro};
     var board=$('board'),legend=$('legend');board.innerHTML='';legend.innerHTML='';
-    var NS='http://www.w3.org/2000/svg';
-    function mk(tag,at){var e=document.createElementNS(NS,tag);Object.keys(at).forEach(function(k){e.setAttribute(k,at[k]);});return e;}
-    var svg=mk('svg',{viewBox:'-110 -110 220 220',role:'img'});
-    var total=SEGS.reduce(function(a,s){return a+Math.max(parts[s.k],0);},0),R=100,r=58,ang=-Math.PI/2,resumo=[];
-    SEGS.forEach(function(s){
-      var v=Math.max(parts[s.k],0),pct=preco>0?parts[s.k]/preco*100:0;
-      if(v>0&&total>0){
-        var fr=v/total,a1=ang+fr*2*Math.PI;
-        if(fr>=0.9999)svg.appendChild(mk('circle',{cx:0,cy:0,r:(R+r)/2,fill:'none',stroke:s.c,'stroke-width':R-r}));
-        else{
-          var big=fr>0.5?1:0,x0=R*Math.cos(ang),y0=R*Math.sin(ang),x1=R*Math.cos(a1),y1=R*Math.sin(a1),x2=r*Math.cos(a1),y2=r*Math.sin(a1),x3=r*Math.cos(ang),y3=r*Math.sin(ang);
-          svg.appendChild(mk('path',{d:'M'+x0+' '+y0+' A'+R+' '+R+' 0 '+big+' 1 '+x1+' '+y1+' L'+x2+' '+y2+' A'+r+' '+r+' 0 '+big+' 0 '+x3+' '+y3+' Z',fill:s.c,stroke:'var(--panel)','stroke-width':2.5,'stroke-linejoin':'round'}));
-        }
-        ang=a1;resumo.push(s.label+' '+Math.round(pct)+'%');
-      }
-      var li=document.createElement('li');li.innerHTML='<span class="sw"></span><span></span><span></span><span class="pc"></span>';
-      li.children[0].style.background=s.c;li.children[1].textContent=s.label;li.children[2].textContent=money(parts[s.k]);li.children[3].textContent=Math.round(pct)+'%';
-      legend.appendChild(li);
-    });
-    if(!(total>0))svg.appendChild(mk('circle',{cx:0,cy:0,r:(R+r)/2,fill:'none',stroke:'var(--line)','stroke-width':R-r}));
-    var tx=money(preco),fs=Math.min(24,100/(tx.length*0.58));
-    var t1=mk('text',{x:0,y:-12,'text-anchor':'middle','font-size':13,fill:'var(--muted)','font-family':'Manrope,Segoe UI,sans-serif','font-weight':600});t1.textContent='Preço no cartão';svg.appendChild(t1);
-    var t2=mk('text',{x:0,y:16,'text-anchor':'middle','font-size':fs,fill:'currentColor','font-family':'Fraunces,Georgia,serif','font-weight':600});t2.textContent=tx;svg.appendChild(t2);
-    svg.setAttribute('aria-label','Composição do preço: '+(resumo.length?resumo.join(', '):'sem valores'));
-    board.appendChild(svg);
+    var rs=rosca(parts,preco,'Preço no cartão',money(preco));board.appendChild(rs.svg);rs.itens.forEach(function(li){legend.appendChild(li);});
     last={preco:preco,pix:pix,vitrine:vitrine,custo:custo,lucro:lucro};
   }
 
@@ -1110,7 +1086,7 @@ summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-
       vendas.seqPed+=1;var agora=new Date().toISOString();
       var pd={id:'PED-'+pad(vendas.seqPed),n:vendas.seqPed,tipo:'estoque',cotacao:'',cliente:'Estoque próprio',fone:'',peca:(quote.nome||'Tábua artesanal').trim(),qtd:q,
         pagamento:'',unit:last.vitrine,unitPix:Math.ceil(last.pix),total:0,sinal:0,previsao:'',obs:obs.value.trim(),data:agora,status:'concluido',concluidoEm:agora,
-        materiais:mats,perda:+quote.perda||0,custoUnit:last.custo,fin:finOf(quote),dim:{c:+quote.dimC||0,l:+quote.dimL||0,e:+quote.dimE||0}};
+        materiais:mats,perda:+quote.perda||0,custoUnit:last.custo,fin:finOf(quote),comp:compSnap(),dim:{c:+quote.dimC||0,l:+quote.dimL||0,e:+quote.dimE||0}};
       var falt=darBaixa(pd);pd.baixa=mats.length>0;
       vendas.pedidos.push(pd);saveVendas('pedidos',pd);saveEst();renderRows();calc();panel.innerHTML='';
       var st=$('status');st.textContent='Pedido '+pd.id+' criado como peça para estoque'+(mats.length?', materiais baixados':'')+'.'+(falt.length?' Sem baixa (item apagado): '+falt.join(', ')+'. ':' ');
@@ -1395,7 +1371,7 @@ summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-
       if(!(q>=1)){b.msg.className='formmsg err';b.msg.textContent='A quantidade precisa ser 1 ou mais.';qt.focus();return;}
       vendas.seqCot+=1;
       var c={id:'COT-'+pad(vendas.seqCot),n:vendas.seqCot,cliente:nome,fone:fone.value.trim(),data:new Date().toISOString(),validadeDias:vd,
-        peca:(quote.nome||'Tábua artesanal').trim(),dim:{c:+quote.dimC||0,l:+quote.dimL||0,e:+quote.dimE||0},qtd:q,unitCartao:last.vitrine,unitPix:Math.ceil(last.pix),custoUnit:last.custo,lucroUnit:last.lucro,
+        peca:(quote.nome||'Tábua artesanal').trim(),dim:{c:+quote.dimC||0,l:+quote.dimL||0,e:+quote.dimE||0},qtd:q,unitCartao:last.vitrine,unitPix:Math.ceil(last.pix),custoUnit:last.custo,lucroUnit:last.lucro,comp:compSnap(),
         materiais:snapshotMateriais(),perda:+quote.perda||0,obs:obs.value.trim(),status:'aberta',calc:clone(quote)};
       vendas.cotacoes.push(c);saveVendas('cotacoes',c);panel.innerHTML='';
       $('status').textContent='';
@@ -1473,6 +1449,7 @@ summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-
       d.appendChild(el('div','doc-line','Custo '+money(c.custoUnit*c.qtd)+' · mão de obra (seu trabalho) '+money(fc.trab*c.qtd)));
       var lm=el('div','doc-line');lm.appendChild(document.createTextNode('Lucro da marcenaria: '));lm.appendChild(el('strong',null,money(lcCartao.lucro)+' ('+pctTxt(lcCartao.pct)+')'));
       lm.appendChild(document.createTextNode(' no cartão · '));lm.appendChild(el('strong',null,money(lcPix.lucro)+' ('+pctTxt(lcPix.pct)+')'));lm.appendChild(document.createTextNode(' no Pix'));d.appendChild(lm);
+      var mcot=margemCotacao(c);if(mcot)d.appendChild(mcot);
       if(c.obs)d.appendChild(el('div','doc-line',c.obs));
       if(c.status==='convertida')d.appendChild(el('div','doc-line','Convertida no pedido '+c.pedido));
       var panel=el('div');var acts=el('div','mv-acts');
@@ -1529,7 +1506,7 @@ summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-
       vendas.seqPed+=1;
       var pd={id:'PED-'+pad(vendas.seqPed),n:vendas.seqPed,cotacao:c.id,cliente:c.cliente,fone:c.fone,peca:c.peca,qtd:q,pagamento:pay,unit:vf/q,total:vf,totalSugerido:u*q,
         sinal:parseLoose(sinal.value),previsao:prev.value||'',obs:obs.value.trim(),data:new Date().toISOString(),status:'aberto',
-        materiais:clone(c.materiais||[]),perda:c.perda,custoUnit:c.custoUnit,fin:finOf(c.calc)};
+        materiais:clone(c.materiais||[]),perda:c.perda,custoUnit:c.custoUnit,fin:finOf(c.calc),comp:c.comp?clone(c.comp):undefined};
       vendas.pedidos.push(pd);c.status='convertida';c.pedido=pd.id;
       saveVendas('pedidos',pd);saveVendas('cotacoes',c);updBadge();renderCot();
       cotMsg('Pedido '+pd.id+' criado a partir da '+c.id+'. Ele fica em produção até você concluir.');
@@ -1581,6 +1558,7 @@ summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-
           var lm=el('div','doc-line');lm.appendChild(document.createTextNode('Lucro da marcenaria: '));lm.appendChild(el('strong',null,money(lp.lucro)+' ('+pctTxt(lp.pct)+')'));d.appendChild(lm);}
         else d.appendChild(el('div','doc-line','Custo '+money(cust)+' · lucro bruto '+money((+pd.total||0)-cust)));
       }
+      if(!est){var mped=margemPedido(pd);if(mped)d.appendChild(mped);}
       if(!est&&pd.status!=='cancelado'){
         var pc2=pctPago(pd),sd2=saldoPd(pd);
         var pl=el('div','doc-line');pl.appendChild(document.createTextNode('Pagamento: '));pl.appendChild(el('strong',null,money(recebido(pd))+' de '+money(pd.total)+' ('+Math.round(pc2)+'% pago)'));
@@ -1665,7 +1643,7 @@ summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-
       vendas.seqPed+=1;
       var sp={id:'PED-'+pad(vendas.seqPed),n:vendas.seqPed,origemEstoque:pd.id,cotacao:'',cliente:nome,fone:fone.value.trim(),peca:pd.peca,qtd:q,pagamento:pay,unit:tot/q,total:tot,
         sinal:rc.checked?tot:0,previsao:'',obs:obs.value.trim(),data:quando,status:'concluido',concluidoEm:quando,baixa:false,materiais:[],perda:pd.perda,custoUnit:pd.custoUnit};
-      if(pd.fin)sp.fin=clone(pd.fin);
+      if(pd.fin)sp.fin=clone(pd.fin);if(pd.comp)sp.comp=clone(pd.comp);
       vendas.pedidos.push(sp);saveVendas('pedidos',sp);updBadge();renderPed();
       pedMsg('Venda registrada em '+sp.id+' para '+nome+' por '+money(tot)+(rc.checked?'. Recebimento lançado em Finanças.':'. Falta receber, veja em Finanças.')+(restantes(pd)===0?' '+pd.id+' foi fechado.':''));
     });
@@ -2784,6 +2762,96 @@ summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-
     if(lista.length>100)box.appendChild(el('p','note','Mostrando os 100 mais recentes de '+lista.length+'. O Excel em Relatórios traz todos.'));
   }
   $('sub-lan').addEventListener('click',function(){finSub='lan';renderFin();});
+
+  /* ---------- margem e distribuição de custos em cotações e pedidos ---------- */
+  /* rosca (pizza) de composição do preço + itens da legenda; usada pela calculadora, cotações e pedidos */
+  function rosca(parts,preco,rotulo,valorTxt){
+    var NS='http://www.w3.org/2000/svg';
+    function mk(tag,at){var e=document.createElementNS(NS,tag);Object.keys(at).forEach(function(k){e.setAttribute(k,at[k]);});return e;}
+    var svg=mk('svg',{viewBox:'-110 -110 220 220',role:'img'});
+    var total=SEGS.reduce(function(a,s){return a+Math.max(parts[s.k]||0,0);},0),R=100,r=58,ang=-Math.PI/2,resumo=[],itens=[];
+    SEGS.forEach(function(s){
+      var raw=parts[s.k]||0,v=Math.max(raw,0),pct=preco>0?raw/preco*100:0;
+      if(v>0&&total>0){
+        var fr=v/total,a1=ang+fr*2*Math.PI;
+        if(fr>=0.9999)svg.appendChild(mk('circle',{cx:0,cy:0,r:(R+r)/2,fill:'none',stroke:s.c,'stroke-width':R-r}));
+        else{
+          var big=fr>0.5?1:0,x0=R*Math.cos(ang),y0=R*Math.sin(ang),x1=R*Math.cos(a1),y1=R*Math.sin(a1),x2=r*Math.cos(a1),y2=r*Math.sin(a1),x3=r*Math.cos(ang),y3=r*Math.sin(ang);
+          svg.appendChild(mk('path',{d:'M'+x0+' '+y0+' A'+R+' '+R+' 0 '+big+' 1 '+x1+' '+y1+' L'+x2+' '+y2+' A'+r+' '+r+' 0 '+big+' 0 '+x3+' '+y3+' Z',fill:s.c,stroke:'var(--panel)','stroke-width':2.5,'stroke-linejoin':'round'}));
+        }
+        ang=a1;resumo.push(s.label+' '+Math.round(pct)+'%');
+      }
+      var li=document.createElement('li');li.innerHTML='<span class="sw"></span><span></span><span></span><span class="pc"></span>';
+      li.children[0].style.background=s.c;li.children[1].textContent=s.label;li.children[2].textContent=money(raw);li.children[3].textContent=Math.round(pct)+'%';
+      if(raw<0)li.children[2].classList.add('neg');
+      itens.push(li);
+    });
+    if(!(total>0))svg.appendChild(mk('circle',{cx:0,cy:0,r:(R+r)/2,fill:'none',stroke:'var(--line)','stroke-width':R-r}));
+    var fs=Math.min(24,100/(valorTxt.length*0.58));
+    var t1=mk('text',{x:0,y:-12,'text-anchor':'middle','font-size':13,fill:'var(--muted)','font-family':'Manrope,Segoe UI,sans-serif','font-weight':600});t1.textContent=rotulo;svg.appendChild(t1);
+    var t2=mk('text',{x:0,y:16,'text-anchor':'middle','font-size':fs,fill:'currentColor','font-family':'Fraunces,Georgia,serif','font-weight':600});t2.textContent=valorTxt;svg.appendChild(t2);
+    svg.setAttribute('aria-label','Composição do preço: '+(resumo.length?resumo.join(', '):'sem valores'));
+    return {svg:svg,itens:itens};
+  }
+  /* custos por peça no momento do orçamento (guardados na cotação e no pedido) */
+  function compSnap(){var c=compute(quote);return {madeira:c.mad,insumos:c.ins,maquinas:c.maq,servicos:c.srv,trabalho:c.trab,fixos:c.fix};}
+  /* cotações antigas não têm o registro: recalcula a partir da cópia da calculadora, com os preços de hoje, e avisa */
+  function compDe(c){
+    if(c.comp)return {p:c.comp,est:false};
+    if(!c.calc)return null;
+    var q=clone(c.calc);if(!Array.isArray(q.madeira))q.madeira=[];if(!Array.isArray(q.insumo))q.insumo=[];
+    var x=compute(q);
+    return {p:{madeira:x.mad,insumos:x.ins,maquinas:x.maq,servicos:x.srv,trabalho:x.trab,fixos:x.fix},est:Math.abs(x.custo-(+c.custoUnit||0))>0.5};
+  }
+  function compDoPedido(pd){
+    if(pd.comp)return {p:pd.comp,est:false};
+    var c=null;vendas.cotacoes.forEach(function(x){if(x.id===pd.cotacao)c=x;});
+    return c?compDe(c):null;
+  }
+  /* distribuição para um valor de venda: custos × quantidade, taxa e imposto sobre o preço, lucro = o que sobra */
+  function margemSpec(cb,preco,qtd,cartao,fin){
+    var u=cb.p,q=qtd||1,fee=((cartao?(+fin.taxa||0):0)+(+fin.imposto||0))/100;
+    var parts={madeira:(+u.madeira||0)*q,insumos:(+u.insumos||0)*q,maquinas:(+u.maquinas||0)*q,servicos:(+u.servicos||0)*q,trabalho:(+u.trabalho||0)*q,fixos:(+u.fixos||0)*q};
+    var custo=parts.madeira+parts.insumos+parts.maquinas+parts.servicos+parts.trabalho+parts.fixos;
+    parts.taxas=preco*fee;parts.lucro=preco-custo-parts.taxas;
+    return {parts:parts,preco:preco,custo:custo,lucro:parts.lucro,pct:preco>0?parts.lucro/preco*100:0,trab:parts.trabalho,minimo:fee<1?custo/(1-fee):0,cartao:cartao,est:cb.est,qtd:q};
+  }
+  function margemCorpo(sp){
+    var box=el('div');
+    var rs=rosca(sp.parts,sp.preco,sp.cartao?'Preço no cartão':'Preço no Pix',money(sp.preco));
+    var b=el('div','board');b.appendChild(rs.svg);box.appendChild(b);
+    var ul=el('ul','legend');rs.itens.forEach(function(li){ul.appendChild(li);});box.appendChild(ul);
+    var cards=el('div','cards');
+    [[money(sp.custo),'Custo total'+(sp.qtd>1?' das '+sp.qtd+' peças':' da peça')],
+     [money(sp.lucro),'Lucro da marcenaria · '+pctTxt(sp.pct)+' do preço'],
+     [money(sp.trab),'Mão de obra (seu trabalho), já dentro do custo'],
+     [money(sp.minimo),'Preço mínimo: abaixo disso o lucro é zero']].forEach(function(x,i){
+      var d=el('div','card');var v=el('div','v',x[0]);v.style.fontSize='20px';if(i===1&&sp.lucro<0)v.classList.add('neg');d.appendChild(v);d.appendChild(el('div','k',x[1]));cards.appendChild(d);});
+    box.appendChild(cards);
+    if(sp.est)box.appendChild(el('p','note','Este orçamento é anterior ao registro dos custos. Os custos foram recalculados com os preços de hoje, então podem diferir do que valiam na época.'));
+    return box;
+  }
+  function margemDetalhe(titulo,monta){
+    var det=el('details','eg-det');det.appendChild(el('summary',null,titulo));var corpo=el('div'),feito=false;det.appendChild(corpo);
+    det.addEventListener('toggle',function(){if(det.open&&!feito){feito=true;monta(corpo);}});
+    return det;
+  }
+  function margemCotacao(c){
+    var cb=compDe(c);if(!cb)return null;var fin=finOf(c.calc);
+    return margemDetalhe('Margem e distribuição de custos',function(corpo){
+      var tg=el('div','seg-toggle');tg.style.margin='8px 0 10px';var bp=el('button',null,'No Pix'),bc=el('button',null,'No cartão');bp.type='button';bc.type='button';tg.appendChild(bp);tg.appendChild(bc);
+      var area=el('div');corpo.appendChild(tg);corpo.appendChild(area);
+      function mostra(cartao){bp.setAttribute('aria-pressed',String(!cartao));bc.setAttribute('aria-pressed',String(cartao));area.innerHTML='';area.appendChild(margemCorpo(margemSpec(cb,(cartao?c.unitCartao:c.unitPix)*c.qtd,c.qtd,cartao,fin)));}
+      bp.addEventListener('click',function(){mostra(false);});bc.addEventListener('click',function(){mostra(true);});mostra(false);
+    });
+  }
+  function margemPedido(pd){
+    var cb=compDoPedido(pd);if(!cb)return null;var fin=finDoPedido(pd)||{taxa:0,imposto:0};
+    return margemDetalhe('Margem e distribuição de custos',function(corpo){
+      corpo.appendChild(el('p','hint','Sobre o valor final do pedido ('+money(pd.total)+', '+(pd.pagamento==='cartao'?'cartão':'Pix')+').'));
+      corpo.appendChild(margemCorpo(margemSpec(cb,+pd.total||0,pd.qtd,pd.pagamento==='cartao',fin)));
+    });
+  }
 
   /* ---------- nuvem: login, sincronização e backups (Supabase) ---------- */
   var SY_KEYS={};SY_KEYS[LS.est]=1;SY_KEYS[LS.orc]=1;SY_KEYS[LS.ven]=1;SY_KEYS[LS.maq]=1;SY_KEYS[LS.fic]=1;SY_KEYS[LS.srv]=1;SY_KEYS[LS.lan]=1;

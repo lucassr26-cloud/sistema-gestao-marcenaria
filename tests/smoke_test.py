@@ -213,6 +213,27 @@ def main():
             w2 = openpyxl.load_workbook(XLSX_FIN); assert w2.sheetnames == ["Lançamentos", "Resumo"] and w2["Lançamentos"]["L1"].value.startswith("Observações") and "PED-0001" in str([c.value for c in w2["Lançamentos"]["E"]])
         except ImportError:
             pass
+        # Margem e distribuição de custos nas cotações e nos pedidos (mesma pizza e mesmos números da calculadora)
+        def valores_legenda(sel):
+            return [float(m.replace(".", "").replace(",", ".")) for m in re.findall(r"R\$\s*(-?[\d.]+,\d\d)", pg.inner_text(sel).replace("\xa0", " "))]
+        pg.click("#tab-cot"); pg.click("[data-cf=todas]")
+        pg.click("#cot-list .doc:has-text('COT-0001') summary:has-text('Margem e distribuição')")
+        pg.wait_for_selector("#cot-list .doc:has-text('COT-0001') .board svg")
+        legpix = pg.inner_text("#cot-list .doc:has-text('COT-0001') .legend").replace("\xa0", " ")
+        assert "Madeira com perda" in legpix and "Seu trabalho" in legpix and "Taxa e imposto" in legpix and "Lucro" in legpix, legpix
+        cx = pg.inner_text("#cot-list .doc:has-text('COT-0001') .cards").replace("\xa0", " ")
+        assert "Custo total das 2 peças" in cx and "Lucro da marcenaria" in cx and "Preço mínimo" in cx and "Mão de obra" in cx, cx
+        centro = num(pg.text_content("#cot-list .doc:has-text('COT-0001') .board svg text:nth-of-type(2)"))
+        soma = sum(valores_legenda("#cot-list .doc:has-text('COT-0001') .legend")); assert abs(soma - centro) < 0.05, (soma, centro)   # as partes somam o preço
+        assert "Preço no Pix" in pg.inner_text("#cot-list .doc:has-text('COT-0001') .board")
+        pg.click("#cot-list .doc:has-text('COT-0001') button:has-text('No cartão')"); assert "Preço no cartão" in pg.inner_text("#cot-list .doc:has-text('COT-0001') .board")
+        pg.click("#tab-ped"); pg.click("[data-pf=todos]")
+        pg.click("#ped-list .doc:has-text('PED-0001') summary:has-text('Margem e distribuição')")
+        pg.wait_for_selector("#ped-list .doc:has-text('PED-0001') .board svg")
+        legp = pg.inner_text("#ped-list .doc:has-text('PED-0001') .legend").replace("\xa0", " ")
+        centrop = num(pg.text_content("#ped-list .doc:has-text('PED-0001') .board svg text:nth-of-type(2)"))
+        assert "Madeira com perda" in legp and abs(sum(valores_legenda("#ped-list .doc:has-text('PED-0001') .legend")) - centrop) < 0.05
+        assert "R$ 1.000,00" in pg.inner_text("#ped-list .doc:has-text('PED-0001') .board").replace("\xa0", " ")   # valor final negociado do pedido
         # Backup por texto: copia o JSON, apaga tudo e restaura colando
         pg.click("#tab-est"); import json
         bk = pg.evaluate("() => JSON.stringify({app:'ljwa-calculadora',versao:6,estoque:JSON.parse(localStorage.getItem('ljwa-estoque-v2')),vendas:JSON.parse(localStorage.getItem('ljwa-vendas-v1'))})")

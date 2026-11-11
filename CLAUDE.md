@@ -32,9 +32,9 @@ Existe uma variante hospedada no claude.ai que salva na conta Claude (capability
   - `saidas[]` (manuais): `{ id, data(ISO), qtd, motivo, obs }`; `baixas[]` (produção): `{ id, data(ISO), qtd, pedido? }`
   - `consumido`: legado (baixas antigas sem data), tratado como saída no fim da linha do tempo.
 - **Cotacao**: `{ id:'COT-0001', n, cliente, fone, data, validadeDias, peca, qtd, unitCartao, unitPix, custoUnit, lucroUnit,
-  materiais[], perda, obs, status:'aberta'|'convertida'|'recusada', pedido?, calc }` (`calc` = cópia do estado da Calculadora)
+  materiais[], perda, obs, status:'aberta'|'convertida'|'recusada', pedido?, calc, comp? }` (`calc` = cópia do estado da Calculadora; `comp` = custos por peça no momento: madeira, insumos, maquinas, servicos, trabalho, fixos)
 - **Pedido**: `{ id:'PED-0001', n, tipo?:'estoque', cotacao, cliente, fone, peca, qtd, pagamento:'pix'|'cartao', unit, total,
-  sinal, pagamentos?:[{id,data:'YYYY-MM-DD',valor,forma,obs,estorno?:{data,motivo}}], previsao, obs, status:'aberto'|'concluido'|'cancelado', concluidoEm?, canceladoEm?, baixa, materiais[], perda, custoUnit }`
+  sinal, pagamentos?:[{id,data:'YYYY-MM-DD',valor,forma,obs,estorno?:{data,motivo}}], previsao, obs, status:'aberto'|'concluido'|'cancelado', concluidoEm?, canceladoEm?, baixa, materiais[], perda, custoUnit, fin?, comp? }` (`comp` copiado da cotação)
 - `materiais[]`: `{ item, nome, tipo, base }` (quantidade-base consumida por peça).
 - **Maquina**: `{ id, nome, valor, residual, vidaAnos, horasMes, manutAno }`. Custo/hora = `(valor − residual)/(vidaAnos·12·horasMes) + manutAno/12/horasMes` (`maqHora`).
 - **Ficha**: `{ id, nome, calc:{nome, dimC, dimL, dimE, perda, horas, madeira[], insumo[], maquinas[]}, criado }`. Ao carregar, mantém taxa, imposto, margem, custos fixos e valor/hora atuais.
@@ -62,7 +62,8 @@ Existe uma variante hospedada no claude.ai que salva na conta Claude (capability
 15. **Excel (.xlsx)** (`xlsxBlob`, `zipBlob`): arquivo escrito à mão (zip sem compressão + XML), sem bibliotecas, funciona offline. Duas abas por relatório: dados (filtro e linha fixa) e Resumo (totais por SUMIFS, por mês/categoria ou por item).
 16. **Lançamentos manuais de caixa** (Finanças → Lançamentos de caixa): entradas e saídas digitadas pelo dono (saldo inicial, aluguel, frete, retirada…). Entram no fluxo de caixa mensal (`cashflow`), no relatório financeiro/Excel (documento "Lançamento manual", origem em Observações) e em `saldoCaixa()` = recebimentos + entradas manuais − compras de estoque − saídas manuais, só até hoje e sem estornos. O cartão "Saldo em caixa" do Início usa `saldoCaixa()`. Correção por estorno.
 17. **Gráfico de composição do preço**: rosca em SVG (`calc`), com cores fixas e bem distintas em `SEGS` (valem nos temas claro e escuro) e preço no centro; a legenda mostra valor e % de cada parte.
-18. Correção de lançamento usa **estorno** (mantém o histórico), nunca exclusão silenciosa.
+18. **Margem e distribuição de custos em cotações e pedidos** (`margemCotacao`, `margemPedido`, `margemSpec`, `rosca`): cada cartão tem "Margem e distribuição de custos" com a mesma pizza e os mesmos números da calculadora (custo total, lucro da marcenaria e %, mão de obra, preço mínimo). Cotação: alterna Pix/cartão sobre `unitPix`/`unitCartao`. Pedido: usa o valor final negociado (`total`) e a forma de pagamento. Custos = `comp` × quantidade; taxa do cartão (só se cartão) e imposto incidem sobre o preço; lucro = o que sobra, então as partes somam o preço. Cotações antigas sem `comp` são recalculadas com os preços de hoje (aviso na tela).
+19. Correção de lançamento usa **estorno** (mantém o histórico), nunca exclusão silenciosa.
 
 ## Interface
 - Mobile-first (usado no celular, na oficina): alvos de toque ≥ 44 px; abas viram grade de 3 colunas abaixo de 480 px.

@@ -6,7 +6,7 @@ Site de uma página só, sem servidor: os dados ficam no navegador.
 ## Módulos
 - **Início**: painel com pedidos em aberto, nível de estoque, recomendações de compra e contas a receber.
 - **Calculadoras**: precificação da peça (madeira, insumos, **máquinas**, **serviços**, horas, custos fixos, taxas e lucro; com **fichas técnicas**), resina da canaleta e End Grain (filetes e metros lineares).
-- **Cotações**: numeradas (COT-0001…), com cliente, validade, texto para WhatsApp e **documento em PDF ou imagem**.
+- **Cotações**: numeradas (COT-0001…), com cliente, validade, texto para WhatsApp e **documento em PDF ou imagem**. Cada cotação e pedido mostra a **margem e a distribuição de custos** (pizza).
 - **Pedidos**: numerados (PED-0001…), em produção até a conclusão; ao concluir, dá baixa no estoque.
 - **Finanças**: contas a receber (pagamentos por pedido), fluxo de caixa mensal e **lançamentos manuais de caixa** (saldo inicial, despesas, retiradas).
 - **Estoque**: compras com custo médio ponderado móvel, madeira em m³, estornos, saídas e histórico.
