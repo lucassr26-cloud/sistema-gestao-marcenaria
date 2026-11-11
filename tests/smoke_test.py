@@ -5,6 +5,9 @@ import pathlib
 from playwright.sync_api import sync_playwright
 
 INDEX = (pathlib.Path(__file__).resolve().parent.parent / "index.html").as_uri()
+import tempfile, os
+XLSX_ESTOQUE = os.path.join(tempfile.gettempdir(), "ljwa-teste-estoque.xlsx")
+XLSX_FIN = os.path.join(tempfile.gettempdir(), "ljwa-teste-financeiro.xlsx")
 
 def main():
     with sync_playwright() as p:
@@ -41,6 +44,17 @@ def main():
         pg.fill("[id^=cv-v-]", "1000"); assert "R$ 1.000,00" in pg.inner_text("#cot-list .panel").replace("\xa0", " ")
         pg.click("#cot-list .panel .primary")
         assert "PED-0001" in pg.text_content("#cot-msg")
+        # Pedido em produção que já foi vendido e recebeu sinal: mostra % pago e só libera o envio com 100%
+        pg.click("#tab-ped"); lst = pg.inner_text("#ped-list")
+        assert "Sem sinal" in lst and "0% pago" in lst and "só é liberado com 100%" in lst, lst
+        pg.click("#ped-list button:has-text('Registrar pagamento')"); pg.fill("[id^=pg-v-]", "100"); pg.click("#ped-list .panel .primary")
+        assert "10% pago" in pg.text_content("#ped-msg") and "R$ 100,00" in pg.text_content("#ped-msg").replace("\xa0", " "), pg.text_content("#ped-msg")
+        lst = pg.inner_text("#ped-list").replace("\xa0", " ")
+        assert "Sinal 10%" in lst and "R$ 100,00 de R$ 1.000,00 (10% pago)" in lst and "falta R$ 900,00" in lst, lst
+        pg.click("[data-pf=sinal]"); assert "PED-0001" in pg.inner_text("#ped-list")                 # filtro: em produção com sinal
+        pg.click("[data-pf=receber]"); assert "PED-0001" in pg.inner_text("#ped-list")               # filtro: aguardando pagamento
+        pg.click("[data-pf=aberto]")
+        pg.click("#tab-ini"); assert "10% pago" in pg.inner_text("#d-ped") and "1 com sinal" in pg.inner_text("#kpis"), pg.inner_text("#d-ped")
         pg.click("#tab-ped"); pg.click("text=Concluir produção"); pg.click("#ped-list .panel .primary")
         assert "concluído" in pg.text_content("#ped-msg")
         pg.click("#tab-ped"); pg.click("[data-pf=concluido]"); pd_txt = pg.inner_text("#ped-list")
@@ -55,7 +69,7 @@ def main():
         # Finanças: pedido concluído sem pagamento aparece a receber; registrar o saldo total quita
         pg.click("#tab-fin"); rec = pg.inner_text("#rec-list")
         assert "PED-0001" in rec and "Falta pagar" in rec, rec
-        pg.click("text=Registrar pagamento"); pg.click("#rec-list .panel .primary")
+        pg.click("#rec-list button:has-text('Registrar pagamento')"); pg.click("#rec-list .panel .primary")
         assert "quitado" in pg.text_content("#rec-msg"), pg.text_content("#rec-msg")
         assert "Nada a receber" in pg.inner_text("#rec-list")
         pg.click("#sub-caixa"); cash = pg.inner_text("#fin-cash").replace("\xa0", " ")
@@ -120,6 +134,20 @@ def main():
         pg.select_option("#fic-sel", label="Tábua de teste")
         assert pg.input_value("#nome") == "Tábua de teste" and "R$ 1,54" in pg.inner_text("#tot-maq").replace("\xa0", " ")
         pg.click("#tab-cad"); pg.click("#cb-fic"); assert "Tábua de teste" in pg.inner_text("#fc-list")
+        # Serviços: cadastro e uso no orçamento
+        pg.click("#tab-cad"); pg.click("#cb-srv")
+        pg.fill("#sv-nome", "Gravação a laser"); pg.fill("#sv-custo", "40"); pg.click("#sv-save")
+        pg.fill("#sv-nome", "Plaina"); pg.fill("#sv-custo", "60"); pg.select_option("#sv-un", "h"); pg.click("#sv-save")
+        assert "Gravação a laser" in pg.inner_text("#sv-list") and "por hora" in pg.inner_text("#sv-list")
+        pg.click("#tab-orc"); pg.click("#sub-preco"); pg.click("#add-srv")
+        pg.select_option("#rows-srv .use:nth-child(1) select", label="Gravação a laser")
+        pg.click("#add-srv"); pg.select_option("#rows-srv .use:nth-child(2) select", label="Plaina"); pg.fill("#rows-srv .use:nth-child(2) .use-bot input", "1,5")
+        pg.click("#add-srv"); pg.select_option("#rows-srv .use:nth-child(3) select", label="Outro serviço (digitar R$)"); pg.fill("#rows-srv .use:nth-child(3) input[aria-label='Valor do serviço em reais']", "55")
+        assert "R$ 185,00" in pg.inner_text("#tot-srv").replace("\xa0", " "), pg.inner_text("#tot-srv")   # 40 + 1,5 h x 60 + 55
+        assert "Serviços" in pg.inner_text("#legend")
+        pg.click("#fic-save"); pg.fill("#fic-nome", "Com serviços"); pg.click("#fic-panel .panel .primary"); pg.click("#reset")
+        assert "Nenhum serviço" in pg.inner_text("#rows-srv")
+        pg.select_option("#fic-sel", label="Com serviços"); assert "R$ 185,00" in pg.inner_text("#tot-srv").replace("\xa0", " ")
         # Cotação em PDF e em imagem
         pg.click("#tab-cot"); pg.click("[data-cf=todas]"); pg.click("text=Documento PDF ou imagem")
         pg.wait_for_selector("#cot-list .panel canvas")
@@ -131,6 +159,34 @@ def main():
             pg.click("#cot-list .panel button:has-text('Salvar imagem')")
         png = open(dl2.value.path(), "rb").read()
         assert png[:4] == b"\x89PNG" and len(png) > 20000 and dl2.value.suggested_filename.endswith(".png")
+        # Relatório de movimentos de estoque, com filtro de período, e exportação para Excel
+        pg.click("#tab-rel"); pg.click("[data-rp=mes]")
+        rel = pg.inner_text("#rel-list").replace("\xa0", " ")
+        assert "Compra" in rel and "Muiracatiara" in rel and "Baixa de produção do pedido PED-0001" in rel, rel
+        assert "R$ 270,00" in pg.inner_text("#rel-kpis").replace("\xa0", " "), pg.inner_text("#rel-kpis")      # compras de 150 + 120
+        pg.click("[data-rt=saida]"); assert "Baixa de produção" in pg.inner_text("#rel-list") and "Compra lançada" not in pg.inner_text("#rel-list")
+        pg.click("[data-rt=todos]")
+        pg.fill("#rel-de", "2020-01-01"); pg.fill("#rel-ate", "2020-12-31"); assert "Nenhum lançamento" in pg.inner_text("#rel-list")   # período sem movimento
+        pg.click("[data-rp=mes]")
+        with pg.expect_download() as dx:
+            pg.click("#rel-xlsx")
+        open(XLSX_ESTOQUE, "wb").write(open(dx.value.path(), "rb").read())
+        assert dx.value.suggested_filename.endswith(".xlsx")
+        pg.click("#rb-fin"); fin = pg.inner_text("#rel-list").replace("\xa0", " ")
+        assert "Pagamento de pedido" in fin and "Compra de madeira" in fin and "Recebimento registrado em Contas a receber do pedido PED-0001" in fin, fin
+        with pg.expect_download() as dy:
+            pg.click("#rel-xlsx")
+        open(XLSX_FIN, "wb").write(open(dy.value.path(), "rb").read())
+        # As planilhas são arquivos .xlsx válidos (zip íntegro; se o openpyxl existir, confere abas, cabeçalho e dados)
+        import zipfile
+        for f in (XLSX_ESTOQUE, XLSX_FIN):
+            z = zipfile.ZipFile(f); assert z.testzip() is None and "xl/workbook.xml" in z.namelist() and "xl/worksheets/sheet2.xml" in z.namelist()
+        try:
+            import openpyxl
+            w1 = openpyxl.load_workbook(XLSX_ESTOQUE); assert w1.sheetnames == ["Movimentos", "Resumo"] and w1["Movimentos"]["B1"].value == "Tipo" and w1["Movimentos"].max_row >= 4
+            w2 = openpyxl.load_workbook(XLSX_FIN); assert w2.sheetnames == ["Lançamentos", "Resumo"] and w2["Lançamentos"]["L1"].value.startswith("Observações") and "PED-0001" in str([c.value for c in w2["Lançamentos"]["E"]])
+        except ImportError:
+            pass
         # Backup por texto: copia o JSON, apaga tudo e restaura colando
         pg.click("#tab-est"); import json
         bk = pg.evaluate("() => JSON.stringify({app:'ljwa-calculadora',versao:6,estoque:JSON.parse(localStorage.getItem('ljwa-estoque-v2')),vendas:JSON.parse(localStorage.getItem('ljwa-vendas-v1'))})")

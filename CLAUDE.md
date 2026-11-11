@@ -4,9 +4,9 @@ Contexto para o Claude Code. O dono é marceneiro (tábuas de churrasco end grai
 explique mudanças em português simples e confirme antes de qualquer coisa que possa apagar ou alterar dados salvos.
 
 ## O que é
-ERP leve de uma página (`index.html`: HTML + CSS + JS puro, sem build, sem dependências) com 7 abas:
+ERP leve de uma página (`index.html`: HTML + CSS + JS puro, sem build, sem dependências) com 8 abas:
 Início/dashboards (`#view-ini`), Calculadoras (`#view-orc`: Precificação, Resina da canaleta e End Grain), Cotações (`#view-cot`), Pedidos (`#view-ped`),
-Finanças (`#view-fin`: Contas a receber e Fluxo de caixa), Estoque (`#view-est`) e Cadastros (`#view-cad`: Máquinas, Fichas técnicas e Conta e backup).
+Finanças (`#view-fin`: Contas a receber e Fluxo de caixa), Estoque (`#view-est`), Relatórios (`#view-rel`: Movimentos de estoque e Lançamentos financeiros, com Excel) e Cadastros (`#view-cad`: Máquinas, Serviços, Fichas técnicas e Conta e backup).
 Interface em **pt-BR**. Moeda BRL via `Intl.NumberFormat('pt-BR')`. Campos numéricos aceitam vírgula (`parseLoose`).
 
 ## Persistência
@@ -14,10 +14,10 @@ Interface em **pt-BR**. Moeda BRL via `Intl.NumberFormat('pt-BR')`. Campos numé
 - `ljwa-estoque-v2` → `{ items: Item[] }`
 - `ljwa-orcamento-v2` → estado da Calculadora (`quote`)
 - `ljwa-vendas-v1` → `{ seqCot, seqPed, cotacoes: Cotacao[], pedidos: Pedido[] }`
-- `ljwa-maquinas-v1` → `{ items: Maquina[] }`; `ljwa-fichas-v1` → `{ items: Ficha[] }`
+- `ljwa-maquinas-v1` → `{ items: Maquina[] }`; `ljwa-servicos-v1` → `{ items: Servico[] }`; `ljwa-fichas-v1` → `{ items: Ficha[] }`
 - `ljwa-precificacao-v1` → legado, usado só em migração
 - `ljwa-sync-v1` (sessão, versão, pendências), `ljwa-supabase-v1` (endereço e chave colados na tela) e `ljwa-backup-meta-v1`: controle da nuvem, não entram no backup
-Backup/restauração (aba Estoque) e pacote da nuvem: JSON `{ app:'ljwa-calculadora', versao:7, exportadoEm, estoque, orcamento, vendas, maquinas, fichas }`. `restoreObj` aceita backups antigos (sem máquinas/fichas).
+Backup/restauração (aba Estoque) e pacote da nuvem: JSON `{ app:'ljwa-calculadora', versao:8, exportadoEm, estoque, orcamento, vendas, maquinas, fichas, servicos }`. `restoreObj` aceita backups antigos (sem máquinas/fichas/serviços).
 **Nunca mude um formato salvo sem migração** que leia os dados antigos: o dono tem dados reais.
 
 Existe uma variante hospedada no claude.ai que salva na conta Claude (capability `db`, documentos em
@@ -38,6 +38,7 @@ Existe uma variante hospedada no claude.ai que salva na conta Claude (capability
 - `materiais[]`: `{ item, nome, tipo, base }` (quantidade-base consumida por peça).
 - **Maquina**: `{ id, nome, valor, residual, vidaAnos, horasMes, manutAno }`. Custo/hora = `(valor − residual)/(vidaAnos·12·horasMes) + manutAno/12/horasMes` (`maqHora`).
 - **Ficha**: `{ id, nome, calc:{nome, dimC, dimL, dimE, perda, horas, madeira[], insumo[], maquinas[]}, criado }`. Ao carregar, mantém taxa, imposto, margem, custos fixos e valor/hora atuais.
+- **Servico**: `{ id, nome, custo, unidade:'un'|'h'|'m'|'m2'|'kg', obs }`. `quote.servicos[]`: `{ id, item, qtd }` (custo = qtd × custo do serviço) ou `{ item:'avulso', nome, valor }` (valor digitado em R$). Entra no custo antes da margem (`srvRowCost`); a ficha técnica também guarda os serviços.
 - `quote.maquinas[]`: `{ id, item, horas }` (uso de máquina na peça; custo entra antes da margem, igual aos insumos). `compute(q)` calcula todos os números do preço e é usado pela calculadora e pelas fichas.
 
 ## Regras de negócio (não quebrar)
@@ -55,7 +56,10 @@ Existe uma variante hospedada no claude.ai que salva na conta Claude (capability
 10. **Texto da cotação para o cliente** (`cotText`): inclui espécies de madeira (materiais tipo madeira), dimensão final (`quote.dimC/dimL/dimE`, copiada em `cotacao.dim`; cotação antiga tenta ler as medidas do nome da peça) e prazo fixo de 4 a 8 semanas.
 11. **Cotação em PDF/imagem** (`cotCanvas`, `pdfDeJpeg`): folha A4 desenhada em canvas (logo embutido em base64, sem biblioteca); o PDF é montado à mão com a imagem JPEG. O conteúdo é medido e encolhe só se não couber.
 12. **Nuvem (Supabase)**: login por e-mail e senha, um registro por usuário em `ljwa_dados` com `versao`; gravar usa `PATCH ... versao=eq.N` (se 0 linhas, houve conflito e o dono escolhe a versão). Backups em `ljwa_backups` (1 por dia, últimos 30, e um antes de trocar versões). Config em `config.js` ou colada na tela. Esquema em `supabase.sql`; passo a passo em `SINCRONIZACAO.md`.
-13. Correção de lançamento usa **estorno** (mantém o histórico), nunca exclusão silenciosa.
+13. **Pagamento do pedido** (aba Pedidos): `pctPago(pd)` = recebido ÷ total. Cartão do pedido mostra "Sinal X%", "Pago 100%", "Aguardando pagamento" (concluído com saldo) ou "Liberado para envio" (concluído e quitado). O botão Registrar pagamento do pedido usa o mesmo `payForm` das Contas a receber. Filtros: Em produção com sinal e Aguardando pagamento.
+14. **Relatórios** (`relEstoqueRows`, `relFinRows`): movimentos de estoque (compras = entrada; baixas de produção e saídas manuais = saída, valorizadas pelo custo médio do momento, mesma lógica do `itemTotals`) e lançamentos financeiros (sinal, pagamentos e vendas de peças = entrada; compras de estoque = saída). Estornos aparecem como "Estornado" e ficam fora dos totais; pedidos cancelados idem. Cada linha leva a origem em Observações. Filtros por período, tipo, item e busca.
+15. **Excel (.xlsx)** (`xlsxBlob`, `zipBlob`): arquivo escrito à mão (zip sem compressão + XML), sem bibliotecas, funciona offline. Duas abas por relatório: dados (filtro e linha fixa) e Resumo (totais por SUMIFS, por mês/categoria ou por item).
+16. Correção de lançamento usa **estorno** (mantém o histórico), nunca exclusão silenciosa.
 
 ## Interface
 - Mobile-first (usado no celular, na oficina): alvos de toque ≥ 44 px; abas viram grade de 3 colunas abaixo de 480 px.
